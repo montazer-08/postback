@@ -4,12 +4,12 @@ import path from 'path';
 
 /**
  * Postback URL - Serverless Function for Vercel
- * يدعم تتبع أي حدث: install, purchase, signup ...
+ * يدعم أي حدث من التطبيق أو الشبكة الإعلانية
  */
 
 export default function handler(req, res) {
   try {
-    // استقبال البيانات من الرابط (GET parameters)
+    // استقبال البيانات من الرابط
     const user_id  = req.query.user_id || 'unknown';
     const event    = req.query.event || 'unknown';
     const campaign = req.query.campaign_id || 'unknown';
@@ -17,8 +17,9 @@ export default function handler(req, res) {
     const device   = req.query.device || 'unknown';
     const country  = req.query.country || 'unknown';
 
-    // تجهيز البيانات بشكل منسق
     const timestamp = new Date().toISOString();
+
+    // تنسيق البيانات بشكل جميل للـ log
     const logLine = `
 ==============================
 Time: ${timestamp}
@@ -31,26 +32,33 @@ Country: ${country}
 ==============================
 `;
 
-    // حفظ البيانات في ملف نصي
-    const logFile = path.join(process.cwd(), 'postback_log.txt');
+    // مسار مؤقت صالح للكتابة على Vercel
+    const logFile = path.join('/tmp', 'postback_log.txt');
     fs.appendFileSync(logFile, logLine);
 
-    console.log(logLine); // للمتابعة في Vercel Logs
+    console.log(logLine); // يظهر في Vercel Logs
 
-    // الرد بشكل منسق للمعلنين أو التطبيق
+    // الرد بشكل JSON على الشبكة أو التطبيق
     res.status(200).json({
       status: 'success',
       message: 'Event recorded successfully',
-      event: event,
-      user_id: user_id,
-      timestamp: timestamp
+      data: {
+        event,
+        user_id,
+        campaign,
+        value,
+        device,
+        country,
+        timestamp
+      }
     });
 
   } catch (error) {
     console.error(error);
     res.status(500).json({
       status: 'error',
-      message: 'Internal Server Error'
+      message: 'Internal Server Error',
+      error: error.message
     });
   }
 }
